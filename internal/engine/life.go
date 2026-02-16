@@ -45,11 +45,8 @@ func (b Board) aliveNeighbors(x, y int) int {
 			if dx == 0 && dy == 0 {
 				continue
 			}
-			nx := x + dx
-			ny := y + dy
-			if nx < 0 || nx >= b.width || ny < 0 || ny >= b.height {
-				continue
-			}
+			nx := (x + dx + b.width) % b.width
+			ny := (y + dy + b.height) % b.height
 			if b.IsAlive(nx, ny) {
 				count++
 			}
