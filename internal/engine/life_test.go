@@ -38,3 +38,14 @@ func TestShouldSurviveLiveCellWithThreeNeighbors(t *testing.T) {
 		t.Fatalf("expected live cell to survive with exactly three neighbors")
 	}
 }
+
+func TestShouldDieLiveCellWithOneNeighbor(t *testing.T) {
+	board := NewBoard(3, 3)
+	board.SetAlive(1, 1, true)
+	board.SetAlive(0, 1, true)
+
+	next := board.NextGeneration()
+	if next.IsAlive(1, 1) {
+		t.Fatalf("expected live cell to die with fewer than two neighbors")
+	}
+}
