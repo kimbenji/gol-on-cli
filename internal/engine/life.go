@@ -22,6 +22,14 @@ func (b Board) IsAlive(x, y int) bool {
 	return b.cells[y][x]
 }
 
+func (b Board) Width() int {
+	return b.width
+}
+
+func (b Board) Height() int {
+	return b.height
+}
+
 func (b Board) NextGeneration() Board {
 	next := NewBoard(b.width, b.height)
 	for y := 0; y < b.height; y++ {
