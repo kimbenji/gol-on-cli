@@ -77,6 +77,28 @@ func (s *Simulation) Board() engine.Board {
 	return s.board
 }
 
+func (s *Simulation) Resize(width, height int) {
+	resized := engine.NewBoard(width, height)
+	copyWidth := min(s.board.Width(), width)
+	copyHeight := min(s.board.Height(), height)
+	for y := 0; y < copyHeight; y++ {
+		for x := 0; x < copyWidth; x++ {
+			if s.board.IsAlive(x, y) {
+				resized.SetAlive(x, y, true)
+			}
+		}
+	}
+	s.board = resized
+	s.width = width
+	s.height = height
+}
+
+func min(left, right int) int {
+	if left < right {
+		return left
+	}
+	return right
+}
 func randomBoard(rng *rand.Rand, width, height int) engine.Board {
 	board := engine.NewBoard(width, height)
 	for y := 0; y < height; y++ {
