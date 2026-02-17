@@ -4,6 +4,7 @@ import (
 	"math/rand"
 
 	"gol-on-cli/internal/engine"
+	"gol-on-cli/internal/pattern"
 )
 
 type BoardFactory func(width, height int) engine.Board
@@ -55,6 +56,17 @@ func (s *Simulation) Resume() {
 func (s *Simulation) Restart() {
 	s.board = s.boardFactory(s.width, s.height)
 	s.generation = 0
+}
+
+func (s *Simulation) LoadPatternFromWikiContent(content string) error {
+	parsedBoard, err := pattern.LoadBoardFromWikiContent(content, s.width, s.height)
+	if err != nil {
+		return err
+	}
+
+	s.board = parsedBoard
+	s.generation = 0
+	return nil
 }
 
 func (s *Simulation) Generation() int {

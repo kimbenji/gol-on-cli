@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"gol-on-cli/internal/engine"
+	"gol-on-cli/internal/pattern"
 )
 
 func TestShouldInitializeRandomBoardWithRequestedSize(t *testing.T) {
@@ -104,4 +105,26 @@ func boardsEqual(left, right engine.Board) bool {
 		}
 	}
 	return true
+}
+
+func TestShouldKeepCurrentBoardAndReturnRecoverableErrorWhenPatternParsingFails(t *testing.T) {
+	board := engine.NewBoard(3, 3)
+	board.SetAlive(1, 1, true)
+
+	sim := NewSimulationWithFactory(3, 3, func(width, height int) engine.Board {
+		return board
+	})
+	before := sim.Board()
+
+	err := sim.LoadPatternFromWikiContent("#Life 1.06\ninvalid")
+
+	if err == nil {
+		t.Fatalf("expected recoverable error when parsing fails")
+	}
+	if _, ok := err.(pattern.RecoverableError); !ok {
+		t.Fatalf("expected recoverable error type, got %T", err)
+	}
+	if !boardsEqual(before, sim.Board()) {
+		t.Fatalf("expected board to remain unchanged on parsing failure")
+	}
 }
