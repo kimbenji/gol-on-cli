@@ -23,3 +23,9 @@ func (s *State) HandleKey(key string) {
 		s.ShouldQuit = true
 	}
 }
+
+func (s *State) ConsumeLoadPatternRequest() bool {
+	requested := s.LoadPatternRequested
+	s.LoadPatternRequested = false
+	return requested
+}

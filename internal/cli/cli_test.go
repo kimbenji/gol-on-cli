@@ -25,7 +25,7 @@ func TestShouldPrintVersionString(t *testing.T) {
 
 func TestShouldAttemptPatternLoadOnStartupWhenPatternURLIsProvided(t *testing.T) {
 	loader := &spyLoader{}
-	_, err := Start(StartOptions{PatternURL: "https://conwaylife.com/wiki/Glider"}, loader)
+	_, err := Start(StartOptions{PatternURL: "https://conwaylife.com/wiki/Glider", FPS: 10}, loader)
 	if err != nil {
 		t.Fatalf("expected startup to succeed, got error: %v", err)
 	}
@@ -66,4 +66,22 @@ func indexOf(source, needle string) int {
 		}
 	}
 	return -1
+}
+
+func TestShouldRejectNonPositiveFPS(t *testing.T) {
+	_, err := Start(StartOptions{FPS: 0}, &spyLoader{})
+	if err == nil {
+		t.Fatalf("expected error for non-positive fps")
+	}
+}
+
+func TestShouldRejectInvalidPatternURLBeforeLoading(t *testing.T) {
+	loader := &spyLoader{}
+	_, err := Start(StartOptions{PatternURL: "https://example.com/wiki/Glider", FPS: 10}, loader)
+	if err == nil {
+		t.Fatalf("expected invalid pattern URL to fail")
+	}
+	if loader.calls != 0 {
+		t.Fatalf("expected loader not to be called for invalid URL")
+	}
 }
