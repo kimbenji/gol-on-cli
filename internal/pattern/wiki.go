@@ -2,6 +2,7 @@ package pattern
 
 import (
 	"fmt"
+	"math"
 	"net/url"
 	"strconv"
 	"strings"
@@ -171,7 +172,11 @@ func parseRLE(body string, width, height int) (engine.Board, error) {
 	for _, char := range strings.Join(lines[1:], "") {
 		switch {
 		case char >= '0' && char <= '9':
-			runLength = runLength*10 + int(char-'0')
+			digit := int(char - '0')
+			if runLength > (math.MaxInt-digit)/10 {
+				return engine.Board{}, fmt.Errorf("invalid RLE: run length overflow")
+			}
+			runLength = runLength*10 + digit
 		case char == 'b' || char == 'o':
 			count := max(1, runLength)
 			for i := 0; i < count; i++ {

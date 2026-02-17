@@ -2,6 +2,29 @@ package engine
 
 import "testing"
 
+func TestShouldReturnErrorWhenBoardSizeIsNonPositive(t *testing.T) {
+	if _, err := NewBoardValidated(0, 3); err == nil {
+		t.Fatalf("expected error for non-positive width")
+	}
+
+	if _, err := NewBoardValidated(3, 0); err == nil {
+		t.Fatalf("expected error for non-positive height")
+	}
+}
+
+func TestShouldIgnoreOutOfRangeCoordinatesWithoutPanicking(t *testing.T) {
+	board := NewBoard(2, 2)
+
+	board.SetAlive(-1, 0, true)
+	board.SetAlive(0, -1, true)
+	board.SetAlive(2, 0, true)
+	board.SetAlive(0, 2, true)
+
+	if board.IsAlive(-1, 0) {
+		t.Fatalf("expected out-of-range read to be treated as dead cell")
+	}
+}
+
 func TestShouldBirthDeadCellWithThreeNeighbors(t *testing.T) {
 	board := NewBoard(3, 3)
 	board.SetAlive(0, 1, true)
@@ -90,5 +113,14 @@ func TestShouldCountNeighborsWithToroidalWrapping(t *testing.T) {
 
 	if !next.IsAlive(2, 2) {
 		t.Fatalf("expected corner cell to be born from wrapped neighbors across board edges")
+	}
+}
+
+func TestShouldSafelyHandleNextGenerationOnZeroSizedBoard(t *testing.T) {
+	board := NewBoard(0, 0)
+	next := board.NextGeneration()
+
+	if next.Width() != 0 || next.Height() != 0 {
+		t.Fatalf("expected zero-sized board to stay zero-sized, got %dx%d", next.Width(), next.Height())
 	}
 }

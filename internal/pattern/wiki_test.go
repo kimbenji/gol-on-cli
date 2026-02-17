@@ -84,3 +84,10 @@ func TestShouldSelectLife106WhenOnlyLife106Exists(t *testing.T) {
 		t.Fatalf("expected Life1.06 selection, got %s", format)
 	}
 }
+
+func TestShouldReturnErrorForRLEOverflowRunLength(t *testing.T) {
+	_, err := ParseToBoard(FormatRLE, "x = 1, y = 1\n9223372036854775808o!", 3, 3)
+	if err == nil {
+		t.Fatalf("expected overflow run-length to return error")
+	}
+}

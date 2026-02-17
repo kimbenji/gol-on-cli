@@ -38,7 +38,7 @@ func main() {
 		return
 	}
 
-	if _, err := cli.Start(cli.StartOptions{PatternURL: *patternURL}, noopLoader{}); err != nil {
+	if _, err := cli.Start(cli.StartOptions{PatternURL: *patternURL, FPS: *fps}, noopLoader{}); err != nil {
 		fmt.Fprintf(os.Stderr, "failed to start: %v\n", err)
 		os.Exit(1)
 	}

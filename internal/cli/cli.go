@@ -3,6 +3,8 @@ package cli
 import (
 	"fmt"
 	"strings"
+
+	"gol-on-cli/internal/pattern"
 )
 
 type Loader interface {
@@ -11,6 +13,7 @@ type Loader interface {
 
 type StartOptions struct {
 	PatternURL string
+	FPS        int
 }
 
 type StartResult struct {
@@ -18,8 +21,14 @@ type StartResult struct {
 }
 
 func Start(options StartOptions, loader Loader) (StartResult, error) {
+	if options.FPS <= 0 {
+		return StartResult{}, fmt.Errorf("invalid fps: must be greater than zero")
+	}
 	if options.PatternURL == "" {
 		return StartResult{}, nil
+	}
+	if !pattern.ValidateWikiURL(options.PatternURL) {
+		return StartResult{}, fmt.Errorf("invalid pattern-url: must match https://conwaylife.com/wiki/...")
 	}
 	if err := loader.Load(options.PatternURL); err != nil {
 		return StartResult{PatternLoadAttempted: true}, err

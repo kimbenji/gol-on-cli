@@ -49,3 +49,15 @@ func TestShouldSwitchToSafeExitStateWhenQIsPressed(t *testing.T) {
 		t.Fatalf("expected safe exit state when q is pressed")
 	}
 }
+
+func TestShouldResetLoadPatternFlagAfterConsume(t *testing.T) {
+	state := NewState()
+	state.HandleKey("l")
+
+	if !state.ConsumeLoadPatternRequest() {
+		t.Fatalf("expected first consume to observe pending load request")
+	}
+	if state.ConsumeLoadPatternRequest() {
+		t.Fatalf("expected second consume to be false after reset")
+	}
+}
