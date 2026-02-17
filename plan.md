@@ -42,6 +42,12 @@
 
 ---
 
+## 현재 진행 상태 (업데이트)
+- [x] 현재 마일스톤: **M3 패턴 로더(ConwayLife Wiki)** 완료 (A~D 섹션 테스트 완료 기준)
+- [ ] 다음 마일스톤: **M4 TUI 렌더러/입력** 진행 예정
+- [x] DoD 진행: **DOD-2 (Game of Life 4대 규칙 테스트 검증)** 완료
+- [ ] DoD 진행: 그 외 항목(DOD-1,3,4,5,6,7) 미완료
+
 ## 테스트 백로그 (go 시 1개씩 순차 처리)
 
 ### A. 부트스트랩/구조
@@ -66,14 +72,14 @@
 - [x] C06 재시작(`r`) 시 랜덤 초기화와 함께 세대가 0으로 초기화되어야 한다.
 
 ### D. 패턴 URL/파서
-- [ ] D01 `https://conwaylife.com/wiki/...` 형식 URL은 유효해야 한다.
-- [ ] D02 https가 아니면 유효하지 않아야 한다.
-- [ ] D03 호스트가 conwaylife.com이 아니면 유효하지 않아야 한다.
-- [ ] D04 경로가 `/wiki/`로 시작하지 않으면 유효하지 않아야 한다.
-- [ ] D05 RLE/PlainText/Life1.06이 모두 존재하면 RLE를 우선 선택해야 한다.
-- [ ] D06 RLE가 없고 PlainText/Life1.06이 있으면 PlainText를 선택해야 한다.
-- [ ] D07 RLE/PlainText가 없고 Life1.06만 있으면 Life1.06을 선택해야 한다.
-- [ ] D08 파싱 실패 시 기존 보드는 유지되고 복구 가능한 오류를 반환해야 한다.
+- [x] D01 `https://conwaylife.com/wiki/...` 형식 URL은 유효해야 한다.
+- [x] D02 https가 아니면 유효하지 않아야 한다.
+- [x] D03 호스트가 conwaylife.com이 아니면 유효하지 않아야 한다.
+- [x] D04 경로가 `/wiki/`로 시작하지 않으면 유효하지 않아야 한다.
+- [x] D05 RLE/PlainText/Life1.06이 모두 존재하면 RLE를 우선 선택해야 한다.
+- [x] D06 RLE가 없고 PlainText/Life1.06이 있으면 PlainText를 선택해야 한다.
+- [x] D07 RLE/PlainText가 없고 Life1.06만 있으면 Life1.06을 선택해야 한다.
+- [x] D08 파싱 실패 시 기존 보드는 유지되고 복구 가능한 오류를 반환해야 한다.
 
 ### E. 렌더링/색상/상태바
 - [ ] E01 살아있는 세포 렌더링은 dead 색상과 달라야 한다.
@@ -104,7 +110,7 @@
 
 ## DoD 추적 체크리스트 (`SPEC.md` §10 매핑)
 - [ ] DOD-1 기본 랜덤 시뮬레이션 동작
-- [ ] DOD-2 Game of Life 4대 규칙 테스트 검증
+- [x] DOD-2 Game of Life 4대 규칙 테스트 검증
 - [ ] DOD-3 살아있는/죽은 세포 색상 구분
 - [ ] DOD-4 resize 자동 반영
 - [ ] DOD-5 외부 wiki 링크 패턴 로드
