@@ -128,3 +128,24 @@ func TestShouldKeepCurrentBoardAndReturnRecoverableErrorWhenPatternParsingFails(
 		t.Fatalf("expected board to remain unchanged on parsing failure")
 	}
 }
+
+func TestShouldRecalculateBoardSizeWhenResized(t *testing.T) {
+	sim := NewSimulation(4, 3, 9)
+
+	sim.Resize(8, 5)
+
+	if sim.Board().Width() != 8 || sim.Board().Height() != 5 {
+		t.Fatalf("expected resized board to be 8x5, got %dx%d", sim.Board().Width(), sim.Board().Height())
+	}
+}
+
+func TestShouldContinueRunningAfterResize(t *testing.T) {
+	sim := NewSimulation(4, 3, 9)
+
+	sim.Resize(8, 5)
+	sim.Tick()
+
+	if sim.Generation() != 1 {
+		t.Fatalf("expected simulation to keep running after resize, got generation=%d", sim.Generation())
+	}
+}
