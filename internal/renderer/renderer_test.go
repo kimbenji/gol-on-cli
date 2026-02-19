@@ -3,6 +3,8 @@ package renderer
 import (
 	"strings"
 	"testing"
+
+	"gol-on-cli/internal/engine"
 )
 
 func TestShouldRenderAliveAndDeadCellsWithDifferentColors(t *testing.T) {
@@ -45,6 +47,19 @@ func TestShouldAlwaysShowKeyboardShortcutsInStatusBar(t *testing.T) {
 	assertContains(t, status, "space")
 	assertContains(t, status, "r")
 	assertContains(t, status, "l")
+}
+
+func TestShouldBuildFrameWithBoardGridAndStatusBar(t *testing.T) {
+	board := engine.NewBoard(3, 2)
+	board.SetAlive(1, 0, true)
+	board.SetAlive(2, 1, true)
+
+	frame := BuildFrame(board, StatusBarData{Generation: 2, Paused: false, PatternSource: "random"})
+
+	assertContains(t, frame, " █ ")
+	assertContains(t, frame, "  █")
+	assertContains(t, frame, "gen:2")
+	assertContains(t, frame, "source:random")
 }
 
 func assertContains(t *testing.T, got, expected string) {

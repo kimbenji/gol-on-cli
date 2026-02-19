@@ -1,6 +1,11 @@
 package renderer
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+
+	"gol-on-cli/internal/engine"
+)
 
 type PaletteMode string
 
@@ -39,4 +44,21 @@ func BuildStatusBar(data StatusBarData) string {
 		state,
 		data.PatternSource,
 	)
+}
+
+func BuildFrame(board engine.Board, status StatusBarData) string {
+	var b strings.Builder
+	for y := 0; y < board.Height(); y++ {
+		for x := 0; x < board.Width(); x++ {
+			if board.IsAlive(x, y) {
+				b.WriteRune('█')
+			} else {
+				b.WriteRune(' ')
+			}
+		}
+		b.WriteRune('\n')
+	}
+	b.WriteString(BuildStatusBar(status))
+	b.WriteRune('\n')
+	return b.String()
 }
