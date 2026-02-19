@@ -13,6 +13,7 @@ import (
 
 	"gol-on-cli/internal/app"
 	"gol-on-cli/internal/cli"
+	"gol-on-cli/internal/engine"
 	"gol-on-cli/internal/input"
 	"gol-on-cli/internal/renderer"
 )
@@ -88,20 +89,31 @@ func runFullscreen(sim *app.Simulation, fps int, source string, stdin *os.File, 
 	state := input.NewState()
 	palette := renderer.SelectPalette(supportsTrueColor())
 
+	orig, err := makeRaw(stdin.Fd())
+	if err != nil {
+		fmt.Fprintf(stdout, "failed to start: cannot enable raw input: %v\n", err)
+		return 1
+	}
+	defer restoreTerm(stdin.Fd(), orig)
+
 	keyCh := startKeyReader(stdin)
 	fitSimulationToTerminal(sim, stdout)
 
 	fmt.Fprint(stdout, "\x1b[?25l")
 	defer fmt.Fprint(stdout, "\x1b[?25h\n")
 
+	var previous *engine.Board
 	for {
-		frame := renderer.BuildFrameWithPalette(sim.Board(), renderer.StatusBarData{
+		current := sim.Board()
+		frame := renderer.BuildFrameWithHistory(current, previous, renderer.StatusBarData{
 			Generation:    sim.Generation(),
 			Paused:        state.Paused,
 			PatternSource: source,
 		}, palette)
-		fmt.Fprint(stdout, "\x1b[H\x1b[2J")
+		fmt.Fprint(stdout, "\x1b[H")
 		fmt.Fprint(stdout, frame)
+		previousSnapshot := current
+		previous = &previousSnapshot
 
 		select {
 		case <-ticker.C:
@@ -114,6 +126,7 @@ func runFullscreen(sim *app.Simulation, fps int, source string, stdin *os.File, 
 		case sig := <-sigCh:
 			if sig == syscall.SIGWINCH {
 				fitSimulationToTerminal(sim, stdout)
+				previous = nil
 				continue
 			}
 			return 0
@@ -226,6 +239,17 @@ type winsize struct {
 	Ypixel uint16
 }
 
+type termios struct {
+	Iflag  uint32
+	Oflag  uint32
+	Cflag  uint32
+	Lflag  uint32
+	Line   uint8
+	Cc     [19]uint8
+	Ispeed uint32
+	Ospeed uint32
+}
+
 func terminalSize(fd uintptr) (int, int, error) {
 	ws := &winsize{}
 	_, _, errno := syscall.Syscall(syscall.SYS_IOCTL, fd, uintptr(syscall.TIOCGWINSZ), uintptr(unsafe.Pointer(ws)))
@@ -234,6 +258,37 @@ func terminalSize(fd uintptr) (int, int, error) {
 	}
 	return int(ws.Col), int(ws.Row), nil
 }
+
+func makeRaw(fd uintptr) (*termios, error) {
+	state := &termios{}
+	_, _, errno := syscall.Syscall6(syscall.SYS_IOCTL, fd, uintptr(syscall.TCGETS), uintptr(unsafe.Pointer(state)), 0, 0, 0)
+	if errno != 0 {
+		return nil, errno
+	}
+
+	raw := *state
+	raw.Iflag &^= syscall.IGNBRK | syscall.BRKINT | syscall.PARMRK | syscall.ISTRIP | syscall.INLCR | syscall.IGNCR | syscall.ICRNL | syscall.IXON
+	raw.Oflag &^= syscall.OPOST
+	raw.Lflag &^= syscall.ECHO | syscall.ECHONL | syscall.ICANON | syscall.ISIG | syscall.IEXTEN
+	raw.Cflag &^= syscall.CSIZE | syscall.PARENB
+	raw.Cflag |= syscall.CS8
+	raw.Cc[syscall.VMIN] = 1
+	raw.Cc[syscall.VTIME] = 0
+
+	_, _, errno = syscall.Syscall6(syscall.SYS_IOCTL, fd, uintptr(syscall.TCSETS), uintptr(unsafe.Pointer(&raw)), 0, 0, 0)
+	if errno != 0 {
+		return nil, errno
+	}
+	return state, nil
+}
+
+func restoreTerm(fd uintptr, state *termios) {
+	if state == nil {
+		return
+	}
+	syscall.Syscall6(syscall.SYS_IOCTL, fd, uintptr(syscall.TCSETS), uintptr(unsafe.Pointer(state)), 0, 0, 0)
+}
+
 func isTerminal(w io.Writer) bool {
 	t, ok := w.(*os.File)
 	if !ok {
