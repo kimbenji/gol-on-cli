@@ -6,11 +6,14 @@ import (
 	"io"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
+	"unsafe"
 
 	"gol-on-cli/internal/app"
 	"gol-on-cli/internal/cli"
+	"gol-on-cli/internal/input"
 	"gol-on-cli/internal/renderer"
 )
 
@@ -21,10 +24,10 @@ type noopLoader struct{}
 func (n noopLoader) Load(url string) error { return nil }
 
 func main() {
-	os.Exit(run(os.Args[1:], os.Stdout, os.Stderr))
+	os.Exit(run(os.Args[1:], os.Stdin, os.Stdout, os.Stderr))
 }
 
-func run(args []string, stdout, stderr io.Writer) int {
+func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	flags := flag.NewFlagSet("gol-on-cli", flag.ContinueOnError)
 	flags.SetOutput(stderr)
 
@@ -54,47 +57,183 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return 1
 	}
 
-	sim := app.NewSimulation(60, 20, *seed)
 	source := patternSource(*patternURL)
-
 	if !isTerminal(stdout) {
+		sim := app.NewSimulation(20, 10, *seed)
 		status := renderer.BuildStatusBar(renderer.StatusBarData{Generation: sim.Generation(), Paused: false, PatternSource: source})
 		fmt.Fprintln(stdout, status)
 		return 0
 	}
 
-	return runFullscreen(sim, *fps, source, stdout)
+	fileIn, inOK := stdin.(*os.File)
+	fileOut, outOK := stdout.(*os.File)
+	if !inOK || !outOK {
+		fmt.Fprintln(stderr, "failed to start: interactive mode requires file stdin/stdout")
+		return 1
+	}
+
+	w, h := initialBoardSize(fileOut.Fd())
+	sim := app.NewSimulation(w, h, *seed)
+	return runFullscreen(sim, *fps, source, fileIn, fileOut)
 }
 
-func runFullscreen(sim *app.Simulation, fps int, source string, stdout io.Writer) int {
+func runFullscreen(sim *app.Simulation, fps int, source string, stdin *os.File, stdout io.Writer) int {
 	ticker := time.NewTicker(time.Second / time.Duration(fps))
 	defer ticker.Stop()
 
 	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
+	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM, syscall.SIGWINCH)
 	defer signal.Stop(sigCh)
+
+	state := input.NewState()
+	palette := renderer.SelectPalette(supportsTrueColor())
+
+	keyCh := startKeyReader(stdin)
+	fitSimulationToTerminal(sim, stdout)
 
 	fmt.Fprint(stdout, "\x1b[?25l")
 	defer fmt.Fprint(stdout, "\x1b[?25h\n")
 
 	for {
-		frame := renderer.BuildFrame(sim.Board(), renderer.StatusBarData{
+		frame := renderer.BuildFrameWithPalette(sim.Board(), renderer.StatusBarData{
 			Generation:    sim.Generation(),
-			Paused:        false,
+			Paused:        state.Paused,
 			PatternSource: source,
-		})
+		}, palette)
 		fmt.Fprint(stdout, "\x1b[H\x1b[2J")
 		fmt.Fprint(stdout, frame)
 
 		select {
 		case <-ticker.C:
 			sim.Tick()
-		case <-sigCh:
+		case key := <-keyCh:
+			handleKey(state, sim, key)
+			if state.ShouldQuit {
+				return 0
+			}
+		case sig := <-sigCh:
+			if sig == syscall.SIGWINCH {
+				fitSimulationToTerminal(sim, stdout)
+				continue
+			}
 			return 0
 		}
 	}
 }
 
+func handleKey(state *input.State, sim *app.Simulation, key string) {
+	state.HandleKey(key)
+	switch key {
+	case "space":
+		if state.Paused {
+			sim.Pause()
+		} else {
+			sim.Resume()
+		}
+	case "r":
+		sim.Restart()
+	}
+}
+
+func startKeyReader(stdin *os.File) <-chan string {
+	keys := make(chan string, 16)
+	go func() {
+		defer close(keys)
+		buf := make([]byte, 1)
+		for {
+			_, err := stdin.Read(buf)
+			if err != nil {
+				return
+			}
+			if key := mapKey(buf[0]); key != "" {
+				keys <- key
+			}
+		}
+	}()
+	return keys
+}
+
+func mapKey(ch byte) string {
+	switch ch {
+	case ' ':
+		return "space"
+	case 'h', 'H':
+		return "h"
+	case '?':
+		return "?"
+	case 'r', 'R':
+		return "r"
+	case 'l', 'L':
+		return "l"
+	case 'q', 'Q':
+		return "q"
+	default:
+		return ""
+	}
+}
+
+func fitSimulationToTerminal(sim *app.Simulation, stdout io.Writer) {
+	file, ok := stdout.(*os.File)
+	if !ok {
+		return
+	}
+	width, height, err := terminalSize(file.Fd())
+	if err != nil {
+		return
+	}
+	if height > 1 {
+		height--
+	}
+	if width < 1 {
+		width = 1
+	}
+	if height < 1 {
+		height = 1
+	}
+	sim.Resize(width, height)
+}
+
+func initialBoardSize(fd uintptr) (int, int) {
+	const startupMinWidth = 20
+	const startupMinHeight = 10
+
+	width, height, err := terminalSize(fd)
+	if err != nil {
+		return startupMinWidth, startupMinHeight
+	}
+	if height > 1 {
+		height--
+	}
+	if width < 1 {
+		width = 1
+	}
+	if height < 1 {
+		height = 1
+	}
+	if width > startupMinWidth {
+		width = startupMinWidth
+	}
+	if height > startupMinHeight {
+		height = startupMinHeight
+	}
+	return width, height
+}
+
+type winsize struct {
+	Row    uint16
+	Col    uint16
+	Xpixel uint16
+	Ypixel uint16
+}
+
+func terminalSize(fd uintptr) (int, int, error) {
+	ws := &winsize{}
+	_, _, errno := syscall.Syscall(syscall.SYS_IOCTL, fd, uintptr(syscall.TIOCGWINSZ), uintptr(unsafe.Pointer(ws)))
+	if errno != 0 {
+		return 0, 0, errno
+	}
+	return int(ws.Col), int(ws.Row), nil
+}
 func isTerminal(w io.Writer) bool {
 	t, ok := w.(*os.File)
 	if !ok {
@@ -105,6 +244,10 @@ func isTerminal(w io.Writer) bool {
 		return false
 	}
 	return (info.Mode() & os.ModeCharDevice) != 0
+}
+
+func supportsTrueColor() bool {
+	return strings.Contains(strings.ToLower(os.Getenv("COLORTERM")), "truecolor")
 }
 
 func patternSource(patternURL string) string {

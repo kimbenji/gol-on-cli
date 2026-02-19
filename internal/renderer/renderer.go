@@ -47,13 +47,22 @@ func BuildStatusBar(data StatusBarData) string {
 }
 
 func BuildFrame(board engine.Board, status StatusBarData) string {
+	return BuildFrameWithPalette(board, status, Palette{})
+}
+
+func BuildFrameWithPalette(board engine.Board, status StatusBarData, palette Palette) string {
 	var b strings.Builder
+	aliveStart, deadStart, colorReset := colorSequences(palette)
 	for y := 0; y < board.Height(); y++ {
 		for x := 0; x < board.Width(); x++ {
 			if board.IsAlive(x, y) {
+				b.WriteString(aliveStart)
 				b.WriteRune('█')
+				b.WriteString(colorReset)
 			} else {
+				b.WriteString(deadStart)
 				b.WriteRune(' ')
+				b.WriteString(colorReset)
 			}
 		}
 		b.WriteRune('\n')
@@ -61,4 +70,14 @@ func BuildFrame(board engine.Board, status StatusBarData) string {
 	b.WriteString(BuildStatusBar(status))
 	b.WriteRune('\n')
 	return b.String()
+}
+
+func colorSequences(palette Palette) (aliveStart, deadStart, reset string) {
+	if palette.Mode == ModeTrueColor {
+		return "\x1b[38;2;0;255;135m", "\x1b[38;2;31;41;55m", "\x1b[0m"
+	}
+	if palette.Mode == ModeFallback {
+		return "\x1b[38;5;46m", "\x1b[38;5;236m", "\x1b[0m"
+	}
+	return "", "", ""
 }
