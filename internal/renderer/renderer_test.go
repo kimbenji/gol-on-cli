@@ -62,6 +62,16 @@ func TestShouldBuildFrameWithBoardGridAndStatusBar(t *testing.T) {
 	assertContains(t, frame, "source:random")
 }
 
+func TestShouldColorizeFrameWhenPaletteIsProvided(t *testing.T) {
+	board := engine.NewBoard(1, 1)
+	board.SetAlive(0, 0, true)
+
+	frame := BuildFrameWithPalette(board, StatusBarData{Generation: 0, PatternSource: "random"}, SelectPalette(true))
+
+	assertContains(t, frame, "\x1b[38;2;0;255;135m")
+	assertContains(t, frame, "\x1b[0m")
+}
+
 func assertContains(t *testing.T, got, expected string) {
 	t.Helper()
 	if !strings.Contains(got, expected) {
