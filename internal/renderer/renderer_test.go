@@ -68,8 +68,22 @@ func TestShouldColorizeFrameWhenPaletteIsProvided(t *testing.T) {
 
 	frame := BuildFrameWithPalette(board, StatusBarData{Generation: 0, PatternSource: "random"}, SelectPalette(true))
 
-	assertContains(t, frame, "\x1b[38;2;0;255;135m")
+	assertContains(t, frame, "\x1b[38;2;255;215;0m")
 	assertContains(t, frame, "\x1b[0m")
+}
+
+func TestShouldRenderNewbornAndRecentlyDeadCellsDynamically(t *testing.T) {
+	previous := engine.NewBoard(2, 1)
+	previous.SetAlive(1, 0, true)
+
+	current := engine.NewBoard(2, 1)
+	current.SetAlive(0, 0, true)
+
+	frame := BuildFrameWithHistory(current, &previous, StatusBarData{Generation: 1, PatternSource: "random"}, SelectPalette(true))
+
+	assertContains(t, frame, "\x1b[38;2;255;215;0m")
+	assertContains(t, frame, "\x1b[38;2;255;99;71m")
+	assertContains(t, frame, "·")
 }
 
 func assertContains(t *testing.T, got, expected string) {
