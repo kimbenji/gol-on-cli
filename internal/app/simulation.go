@@ -44,7 +44,7 @@ func (s *Simulation) Tick() {
 		return
 	}
 	next := s.board.NextGeneration()
-	if boardsEqual(s.board, next) {
+	if boardsMatch(s.board, next) {
 		s.stableGenerations++
 	} else {
 		s.stableGenerations = 0
@@ -153,7 +153,7 @@ func randomBoard(rng *rand.Rand, width, height int) engine.Board {
 	return board
 }
 
-func boardsEqual(left, right engine.Board) bool {
+func boardsMatch(left, right engine.Board) bool {
 	if left.Width() != right.Width() || left.Height() != right.Height() {
 		return false
 	}
