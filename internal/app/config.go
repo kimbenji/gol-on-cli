@@ -7,7 +7,7 @@ type ColorMode string
 const (
 	SeedModeRandom      SeedMode  = "random"
 	ColorModeTrueColor  ColorMode = "truecolor"
-	defaultFPS                    = 10
+	defaultFPS                    = 5
 )
 
 type Config struct {

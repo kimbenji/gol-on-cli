@@ -12,6 +12,7 @@ type BoardFactory func(width, height int) engine.Board
 type Simulation struct {
 	board        engine.Board
 	generation   int
+	stableGenerations int
 	paused       bool
 	width        int
 	height       int
@@ -30,6 +31,7 @@ func NewSimulationWithFactory(width, height int, factory BoardFactory) *Simulati
 	return &Simulation{
 		board:        factory(width, height),
 		generation:   0,
+		stableGenerations: 0,
 		paused:       false,
 		width:        width,
 		height:       height,
@@ -41,7 +43,18 @@ func (s *Simulation) Tick() {
 	if s.paused {
 		return
 	}
-	s.board = s.board.NextGeneration()
+	next := s.board.NextGeneration()
+	if boardsEqual(s.board, next) {
+		s.stableGenerations++
+	} else {
+		s.stableGenerations = 0
+	}
+	if s.stableGenerations >= 100 {
+		s.Restart()
+		s.stableGenerations = 0
+		return
+	}
+	s.board = next
 	s.generation++
 }
 
@@ -56,6 +69,7 @@ func (s *Simulation) Resume() {
 func (s *Simulation) Restart() {
 	s.board = s.boardFactory(s.width, s.height)
 	s.generation = 0
+	s.stableGenerations = 0
 }
 
 func (s *Simulation) LoadPatternFromWikiContent(content string) error {
@@ -66,6 +80,7 @@ func (s *Simulation) LoadPatternFromWikiContent(content string) error {
 
 	s.board = parsedBoard
 	s.generation = 0
+	s.stableGenerations = 0
 	return nil
 }
 
@@ -91,6 +106,7 @@ func (s *Simulation) Resize(width, height int) {
 	s.board = resized
 	s.width = width
 	s.height = height
+	s.stableGenerations = 0
 }
 
 func min(left, right int) int {
@@ -101,12 +117,52 @@ func min(left, right int) int {
 }
 func randomBoard(rng *rand.Rand, width, height int) engine.Board {
 	board := engine.NewBoard(width, height)
-	for y := 0; y < height; y++ {
-		for x := 0; x < width; x++ {
-			if rng.Intn(2) == 1 {
-				board.SetAlive(x, y, true)
+	if width <= 0 || height <= 0 {
+		return board
+	}
+
+	windowW := width
+	if windowW > 10 {
+		windowW = 10
+	}
+	windowH := height
+	if windowH > 10 {
+		windowH = 10
+	}
+
+	startX := (width - windowW) / 2
+	startY := (height - windowH) / 2
+
+	maxCells := windowW * windowH
+	target := 16
+	if maxCells < target {
+		target = maxCells
+	}
+
+	picked := make(map[int]struct{}, target)
+	for len(picked) < target {
+		index := rng.Intn(maxCells)
+		if _, exists := picked[index]; exists {
+			continue
+		}
+		picked[index] = struct{}{}
+		x := index % windowW
+		y := index / windowW
+		board.SetAlive(startX+x, startY+y, true)
+	}
+	return board
+}
+
+func boardsEqual(left, right engine.Board) bool {
+	if left.Width() != right.Width() || left.Height() != right.Height() {
+		return false
+	}
+	for y := 0; y < left.Height(); y++ {
+		for x := 0; x < left.Width(); x++ {
+			if left.IsAlive(x, y) != right.IsAlive(x, y) {
+				return false
 			}
 		}
 	}
-	return board
+	return true
 }

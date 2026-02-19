@@ -83,7 +83,7 @@ func TestShouldRenderNewbornAndRecentlyDeadCellsDynamically(t *testing.T) {
 
 	assertContains(t, frame, "\x1b[38;2;255;215;0m")
 	assertContains(t, frame, "\x1b[38;2;255;99;71m")
-	assertContains(t, frame, "·")
+	assertContains(t, frame, "\x1b[38;2;255;99;71m \x1b[0m")
 }
 
 func assertContains(t *testing.T, got, expected string) {

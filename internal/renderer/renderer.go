@@ -26,6 +26,7 @@ type StatusBarData struct {
 	Generation    int
 	Paused        bool
 	PatternSource string
+	Notice        string
 }
 
 func SelectPalette(supportsTrueColor bool) Palette {
@@ -40,12 +41,16 @@ func BuildStatusBar(data StatusBarData) string {
 	if data.Paused {
 		state = "paused"
 	}
-	return fmt.Sprintf(
+	status := fmt.Sprintf(
 		"gen:%d | state:%s | source:%s | keys:q h/? space r l",
 		data.Generation,
 		state,
 		data.PatternSource,
 	)
+	if data.Notice == "" {
+		return status
+	}
+	return fmt.Sprintf("%s | notice:%s", status, data.Notice)
 }
 
 func BuildFrame(board engine.Board, status StatusBarData) string {
@@ -58,38 +63,31 @@ func BuildFrameWithPalette(board engine.Board, status StatusBarData, palette Pal
 
 func BuildFrameWithHistory(board engine.Board, previous *engine.Board, status StatusBarData, palette Palette) string {
 	var b strings.Builder
-	aliveStart, deadStart, newbornStart, recentlyDeadStart, colorReset := colorSequences(palette)
 	for y := 0; y < board.Height(); y++ {
 		for x := 0; x < board.Width(); x++ {
 			isAlive := board.IsAlive(x, y)
 			wasAlive := previous != nil && previous.IsAlive(x, y)
-			if isAlive {
-				if !wasAlive {
-					b.WriteString(newbornStart)
-				} else {
-					b.WriteString(aliveStart)
-				}
-				b.WriteRune('█')
-				b.WriteString(colorReset)
-				continue
-			}
-
-			if wasAlive {
-				b.WriteString(recentlyDeadStart)
-				b.WriteRune('·')
-				b.WriteString(colorReset)
-				continue
-			}
-
-			b.WriteString(deadStart)
-			b.WriteRune(' ')
-			b.WriteString(colorReset)
+			b.WriteString(RenderCell(isAlive, wasAlive, palette))
 		}
 		b.WriteRune('\n')
 	}
 	b.WriteString(BuildStatusBar(status))
 	b.WriteRune('\n')
 	return b.String()
+}
+
+func RenderCell(isAlive, wasAlive bool, palette Palette) string {
+	aliveStart, deadStart, newbornStart, recentlyDeadStart, colorReset := colorSequences(palette)
+	if isAlive {
+		if !wasAlive {
+			return newbornStart + "█" + colorReset
+		}
+		return aliveStart + "█" + colorReset
+	}
+	if wasAlive {
+		return recentlyDeadStart + " " + colorReset
+	}
+	return deadStart + " " + colorReset
 }
 
 func colorSequences(palette Palette) (aliveStart, deadStart, newbornStart, recentlyDeadStart, reset string) {
