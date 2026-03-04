@@ -149,3 +149,28 @@ func TestShouldContinueRunningAfterResize(t *testing.T) {
 		t.Fatalf("expected simulation to keep running after resize, got generation=%d", sim.Generation())
 	}
 }
+
+func TestShouldSeedHalfDensityWithinDoubleStartupWindow(t *testing.T) {
+	sim := NewSimulation(40, 40, 7)
+
+	board := sim.Board()
+	startX, endX := 10, 30
+	startY, endY := 10, 30
+	aliveCount := 0
+
+	for y := 0; y < board.Height(); y++ {
+		for x := 0; x < board.Width(); x++ {
+			if !board.IsAlive(x, y) {
+				continue
+			}
+			aliveCount++
+			if x < startX || x >= endX || y < startY || y >= endY {
+				t.Fatalf("expected seeded cells to stay within centered 20x20 startup window, but got alive cell at (%d,%d)", x, y)
+			}
+		}
+	}
+
+	if aliveCount != 200 {
+		t.Fatalf("expected 50%% density in 20x20 startup window (200 alive cells), got %d", aliveCount)
+	}
+}

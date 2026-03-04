@@ -10,13 +10,13 @@ import (
 type BoardFactory func(width, height int) engine.Board
 
 type Simulation struct {
-	board        engine.Board
-	generation   int
+	board             engine.Board
+	generation        int
 	stableGenerations int
-	paused       bool
-	width        int
-	height       int
-	boardFactory BoardFactory
+	paused            bool
+	width             int
+	height            int
+	boardFactory      BoardFactory
 }
 
 func NewSimulation(width, height int, seed int64) *Simulation {
@@ -29,13 +29,13 @@ func NewSimulation(width, height int, seed int64) *Simulation {
 
 func NewSimulationWithFactory(width, height int, factory BoardFactory) *Simulation {
 	return &Simulation{
-		board:        factory(width, height),
-		generation:   0,
+		board:             factory(width, height),
+		generation:        0,
 		stableGenerations: 0,
-		paused:       false,
-		width:        width,
-		height:       height,
-		boardFactory: factory,
+		paused:            false,
+		width:             width,
+		height:            height,
+		boardFactory:      factory,
 	}
 }
 
@@ -121,23 +121,21 @@ func randomBoard(rng *rand.Rand, width, height int) engine.Board {
 		return board
 	}
 
+	const startupWindowSize = 20
 	windowW := width
-	if windowW > 10 {
-		windowW = 10
+	if windowW > startupWindowSize {
+		windowW = startupWindowSize
 	}
 	windowH := height
-	if windowH > 10 {
-		windowH = 10
+	if windowH > startupWindowSize {
+		windowH = startupWindowSize
 	}
 
 	startX := (width - windowW) / 2
 	startY := (height - windowH) / 2
 
 	maxCells := windowW * windowH
-	target := 16
-	if maxCells < target {
-		target = maxCells
-	}
+	target := (maxCells + 1) / 2
 
 	picked := make(map[int]struct{}, target)
 	for len(picked) < target {
